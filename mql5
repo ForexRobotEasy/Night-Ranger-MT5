@@ -1,0 +1,77 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                               Night Ranger MT5    |
+//|                               Copyright © 2022, Forex Robot Easy Team |
+//|                                       https://www.forexroboteasy.com |
+//+------------------------------------------------------------------+
+
+// Include necessary libraries
+#include <Trade\Trade.mqh>
+#include <Indicators\Indicators.mqh>
+
+// Define global variables
+CTrade trade;
+CIndicators indicators;
+
+// Initialize the trading robot
+void OnInit()
+{
+   // Connect to the MetaTrader 5 platform
+   trade.Connect();
+
+   // Initialize the charting system
+   indicators.InitChart();
+
+   // Set the default time frame
+   indicators.SetTimeFrame(PERIOD_H1);
+
+   // Add technical indicators
+   indicators.AddIndicator(MA, 14, PRICE_CLOSE);
+   indicators.AddIndicator(BOLLINGER_BANDS, 20, 2.0, PRICE_CLOSE);
+   indicators.AddIndicator(RSI, 14);
+
+   // Start monitoring the market
+   trade.StartMonitoring();
+}
+
+// Execute trading logic
+void OnTick()
+{
+   // Get the current time frame
+   ENUM_TIMEFRAMES timeframe = indicators.GetTimeFrame();
+
+   // Get the current market data
+   MqlRates rates[];
+   int copied = CopyRates(_Symbol, timeframe, 0, 1, rates);
+
+   if (copied > 0)
+   {
+      // Perform technical analysis
+      double ma = indicators.GetIndicatorValue(MA, 0);
+      double upperBand = indicators.GetIndicatorValue(BOLLINGER_BANDS, BAND_UPPER, 0);
+      double lowerBand = indicators.GetIndicatorValue(BOLLINGER_BANDS, BAND_LOWER, 0);
+      double rsi = indicators.GetIndicatorValue(RSI, 0);
+
+      // Make trading decisions based on the analysis
+      if (rates[0].close > ma && rates[0].close < lowerBand && rsi < 30)
+      {
+         trade.Buy(_Symbol, 1);
+      }
+      else if (rates[0].close < ma && rates[0].close > upperBand && rsi > 70)
+      {
+         trade.Sell(_Symbol, 1);
+      }
+   }
+}
+
+// Stop the trading robot
+void OnDeinit(const int reason)
+{
+   // Disconnect from the MetaTrader 5 platform
+   trade.Disconnect();
+
+   // Clean up resources
+   indicators.CleanupChart();
+}
+
+//+------------------------------------------------------------------+
